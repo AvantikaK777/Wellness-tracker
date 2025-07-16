@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Wellness Tracker</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <link href="style.css" rel="stylesheet">
+</head>
+<body>
+
+<header>
+  <h1>💖 Wellness Tracker</h1>
+  <p>Stay balanced & healthy with mindful breaks</p>
+</header>
+
+<div class="container">
+  <div class="sidebar">
+    <h2>Quick Actions</h2>
+    <button class="btn" id="resetData"> Reset Data</button>
+
+    <div class="card">
+      <h3>Today's Mood</h3>
+      <div class="moods" id="moodOptions">
+        <span>😊</span><span>😌</span><span>😴</span><span>😰</span>
+        <span>🤔</span><span>😐</span><span>🥳</span><span>😔</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Wellness Tips</h3>
+      <ul>
+        <li>Take 5-minute breaks hourly</li>
+        <li>Follow the 20-20-20 rule for eye strain</li>
+        <li>Stay hydrated</li>
+        <li>Try mindful breathing</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="card">
+      <h2>🕒 Screen Time Today</h2>
+      <div class="big-text" id="screenTime">0h 0m</div>
+      <p>Session started at: <span id="sessionStart"></span></p>
+    </div>
+
+    <div class="card">
+      <h2>☕ Breaks Taken</h2>
+      <div class="big-text" id="breakCount">0</div>
+      <button class="btn" id="takeBreak">+ Take a Break</button>
+    </div>
+
+    <div class="card">
+      <h2>⏰ Next Break Timer</h2>
+      <div class="big-text timer" id="breakTimer">60:00</div>
+      <p>Set Break Reminder Interval:</p>
+      <div class="intervals">
+        <button data-time="30">30m</button>
+        <button class="active" data-time="60">60m</button>
+        <button data-time="90">90m</button>
+        <button data-time="120">120m</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>📊 Daily Wellness Summary</h2>
+      <div class="grid-summary">
+        <div><strong id="sumScreen">0h 0m</strong><br>Screen Time</div>
+        <div><strong id="sumBreaks">0</strong><br>Breaks</div>
+        <div><strong id="sumMood">?</strong><br>Current Mood</div>
+        <div><strong id="avgBreak">0m</strong><br>Avg Time/Break</div>
+      </div>
+      <button class="btn" id="saveSession">Save Session</button>
+    </div>
+
+    <div class="card">
+      <h2>📜 Activity History</h2>
+      <button class="btn" id="clearHistory">Clear History</button>
+      <ul id="historyList"></ul>
+    </div>
+
+  </div>
+</div>
+
+<footer>
+  <p>Made with &hearts; by Code Crusaders</p>
+</footer>
+
+<script>
+  const STORAGE_KEY = 'wellnessTrackerStartTime';
+  const HISTORY_KEY = 'wellnessTrackerHistory';
+
+  let startTime;
+  let breakCount = 0;
+  let totalBreakTime = 0;
+  let breakInterval = 60 * 60;
+  let timer, currentMood = '?';
+
+  const screenTimeEl = document.getElementById('screenTime');
+  const sessionStartEl = document.getElementById('sessionStart');
+  const breakCountEl = document.getElementById('breakCount');
+  const breakTimerEl = document.getElementById('breakTimer');
+  const sumScreenEl = document.getElementById('sumScreen');
+  const sumBreaksEl = document.getElementById('sumBreaks');
+  const sumMoodEl = document.getElementById('sumMood');
+  const avgBreakEl = document.getElementById('avgBreak');
+  const moodOptions = document.getElementById('moodOptions');
+  const historyList = document.getElementById('historyList');
+
+  function initializeStartTime() {
+    const storedTime = localStorage.getItem(STORAGE_KEY);
+    startTime = storedTime ? new Date(parseInt(storedTime)) : new Date();
+    localStorage.setItem(STORAGE_KEY, startTime.getTime());
+  }
+
+  function updateScreenTime() {
+    const now = new Date();
+    const diff = now - startTime;
+    const mins = Math.floor(diff / 60000);
+    const hrs = Math.floor(mins / 60);
+    const minLeft = mins % 60;
+    screenTimeEl.innerText = `${hrs}h ${minLeft}m`;
+    sumScreenEl.innerText = `${hrs}h ${minLeft}m`;
+  }
+
+  function startBreakTimer() {
+    let timeLeft = breakInterval;
+    if (timer) clearInterval(timer);
+    timer = setInterval(() => {
+      timeLeft--;
+      const min = String(Math.floor(timeLeft / 60)).padStart(2, '0');
+      const sec = String(timeLeft % 60).padStart(2, '0');
+      breakTimerEl.innerText = `${min}:${sec}`;
+      if (timeLeft <= 0) {
+        alert("⏰ Time to take a break!");
+        startBreakTimer();
+      }
+    }, 1000);
+  }
+
+  function loadHistory() {
+    const history = JSON.parse(localStorage.getItem(HISTORY_KEY)) || [];
+    historyList.innerHTML = history.map(entry => `
+      <li><strong>${entry.date}:</strong> ${entry.screenTime}, ${entry.breaks} breaks, Mood: ${entry.mood}, Avg Break: ${entry.avgBreak}</li>
+    `).join('');
+  }
+
+  document.getElementById('takeBreak').addEventListener('click', () => {
+    breakCount++;
+    breakCountEl.innerText = breakCount;
+    sumBreaksEl.innerText = breakCount;
+    totalBreakTime += 5;
+    avgBreakEl.innerText = `${Math.round(totalBreakTime / breakCount)}m`;
+  });
+
+  moodOptions.addEventListener('click', (e) => {
+    if (e.target.tagName === 'SPAN') {
+      document.querySelectorAll('#moodOptions span').forEach(span => span.classList.remove('selected'));
+      e.target.classList.add('selected');
+      currentMood = e.target.innerText;
+      sumMoodEl.innerText = currentMood;
+    }
+  });
+
+  document.querySelectorAll('.intervals button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.intervals button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      breakInterval = parseInt(btn.dataset.time) * 60;
+      startBreakTimer();
+    });
+  });
+
+  document.getElementById('resetData').addEventListener('click', () => {
+    localStorage.removeItem(STORAGE_KEY);
+    location.reload();
+  });
+
+  document.getElementById('saveSession').addEventListener('click', () => {
+    const history = JSON.parse(localStorage.getItem(HISTORY_KEY)) || [];
+    const now = new Date();
+    history.push({
+      date: now.toLocaleDateString() + ' ' + now.toLocaleTimeString(),
+      screenTime: sumScreenEl.innerText,
+      breaks: breakCount,
+      mood: currentMood,
+      avgBreak: avgBreakEl.innerText
+    });
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    loadHistory();
+    alert('Session saved to history!');
+  });
+
+  document.getElementById('clearHistory').addEventListener('click', () => {
+  if (confirm('Are you sure you want to clear all history?')) {
+    localStorage.removeItem(HISTORY_KEY);
+    loadHistory();
+    alert('Activity history cleared!');
+  }
+});
+
+
+
+  initializeStartTime();
+  sessionStartEl.innerText = startTime.toLocaleTimeString();
+  updateScreenTime();
+  setInterval(updateScreenTime, 60000);
+  startBreakTimer();
+  loadHistory();
+</script>
+
+</body>
+</html>
